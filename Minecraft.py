@@ -12,11 +12,6 @@ class Enchantment(object):
 		self.item_multi = _item_multi
 		self.id = None
 
-	def add_exculsion(self, ench):
-		if not isinstance(ench, Enchantment):
-			raise
-		self.excluded.add(ench)
-
 Protection = 0
 FireProtection = 1
 FeatherFalling = 2
@@ -329,56 +324,6 @@ def SimpleTest():
 	c, bb = Combine(i, b3)
 	print(c, bb)
 
-def TryPairingS():
-	b1 = Book()
-	b1.add_ench(Fortune, 3)
-	b2 = Book()
-	b2.add_ench(Efficiency, 5)
-
-	p = Pickaxe()
-
-	goal = Pickaxe()
-	goal.add_ench(Fortune, 3)
-	goal.add_ench(Efficiency, 5)
-
-	pair_up([b1, b2, p], goal)
-
-def TryPairingD():
-	b1 = Book()
-	b1.add_ench(Fortune, 3)
-	b3 = Book()
-	b3.add_ench(Fortune, 3)
-	b2 = Book()
-	b2.add_ench(Efficiency, 5)
-
-	p = Pickaxe()
-
-	goal = Pickaxe()
-	goal.add_ench(Fortune, 3)
-	goal.add_ench(Efficiency, 5)
-
-	pair_up([b1, b2, b3, p], goal)
-
-def TryPairingL():
-	b1 = Book()
-	b1.add_ench(Fortune, 3)
-	b2 = Book()
-	b2.add_ench(Efficiency, 5)
-	b3 = Book()
-	b3.add_ench(Unbreaking, 3)
-	b4 = Book()
-	b4.add_ench(Mending, 1)
-
-	p = Pickaxe()
-
-	goal = Pickaxe()
-	goal.add_ench(Fortune, 3)
-	goal.add_ench(Efficiency, 5)
-	goal.add_ench(Unbreaking, 3)
-	goal.add_ench(Mending, 1)
-
-	pair_up([b1, b2, b3, b4, p], goal)
-
 def CheckBadPair():
 	try:
 		b = BodyArmor()
@@ -454,23 +399,25 @@ def print_answer(answer):
 	pass
 
 def pair_up(iList, goal):
-	global lowest_value
-	lowest_value = None
 	[print_answer(ans) for ans in _pair_up(iList, goal, 0)]
 
-def Test_lowest_value():
+def Test_calculate_value():
 	x = Book()
 	ans1 = (3, (x,x))
 	ans2 = (2, (x,x))
 	ans3 = (1, ((2, (x,x)),x))
 	ans4 = (1, (x, (1,(x,x))))
 	ans5 = (1, (x, (1,((1,(x,x)),x))))
+	ans6 = (1, ((1,(x,x)), (1,(x,x))))
+	ans7 = (1, ((1,((1,(x,x)),(1,(x,(1,(x,x)))))), (1,((1,(x,(1,((1,(x,x)),x)))),x))))
 
 	print(calculate_value(ans1) == 3)
 	print(calculate_value(ans2) == 2)
 	print(calculate_value(ans3) == 3)
 	print(calculate_value(ans4) == 2)
 	print(calculate_value(ans5) == 3)
+	print(calculate_value(ans6) == 3)
+	print(calculate_value(ans7) == 9)
 
 def calculate_value(answer):
 	cost, i = answer
@@ -496,42 +443,36 @@ def Test_Lowest_answers():
 	ans3 = (1, ((2, (x,x)),x))
 	ans4 = (1, (x, (1,(x,x))))
 	ans5 = (1, (x, (1,((1,(x,x)),x))))
+	ans6 = (1, ((1,(x,x)), (1,(x,x))))
 
-	global lowest_value
-	lowest_value = None
-	print(lowest_anwers_only([], ans1) == [ans1])
-	lowest_value = 3
-	print(lowest_anwers_only([ans1], ans1) == [ans1,ans1])
-	lowest_value = 3
-	print(lowest_anwers_only([ans1], ans2) == [ans2])
-	lowest_value = 3
-	print(lowest_anwers_only([ans1], ans3) == [ans1,ans3])
-	lowest_value = 2
-	print(lowest_anwers_only([ans4], ans1) == [ans4])
-	lowest_value = 3
-	print(lowest_anwers_only([ans1,ans3,ans5], ans4) == [ans4])
-	lowest_value = 3
-	print(lowest_anwers_only([ans1,ans3], ans5) == [ans1,ans3,ans5])
+	print(lowest_anwers_only([], None, ans1) == [ans1])
+	print(lowest_anwers_only([ans1], 3, ans1) == [ans1,ans1])
+	print(lowest_anwers_only([ans1], 3, ans2) == [ans2])
+	print(lowest_anwers_only([ans1], 3, ans3) == [ans1,ans3])
+	print(lowest_anwers_only([ans4], 2, ans1) == [ans4])
+	print(lowest_anwers_only([ans1,ans3,ans5], 3, ans4) == [ans4])
+	print(lowest_anwers_only([ans1,ans3], 3, ans5) == [ans1,ans3,ans5])
+	print(lowest_anwers_only([ans1], 3, ans6) == [ans6])
 
 
-lowest_value = 0
-def lowest_anwers_only(answer_list, new_answer):
+def lowest_anwers_only(answer_list, local_lowest, new_answer):
+
 	value = calculate_value(new_answer)
-	global lowest_value
 	#if emplty trivially add the item
 	if not answer_list:
-		lowest_value = value
-		return [new_answer]
+		local_lowest = value
+		return local_lowest, [new_answer]
 
 	#We can assume all answers have the same value
 	#that value is the lowest value
-	if value < lowest_value:
-		return [new_answer]
-	elif value > lowest_value:
-		return answer_list
-	elif value == lowest_value:
+	if value < local_lowest:
+		local_lowest = value
+		return local_lowest, [new_answer]
+	elif value > local_lowest:
+		return local_lowest, answer_list
+	elif value == local_lowest:
 		answer_list.append(new_answer)
-		return answer_list
+		return local_lowest, answer_list
 
 	raise "Shouldn't reach here"
 
@@ -591,7 +532,8 @@ def replace_item(a, combo, item):
 
 def _pair_up(iList, goal, current_cost):
 	answers = []
-	global lowest_value
+	# global lowest_value
+	local_lowest = None
 
 	for mergee in iList:
 		possible_mergers = list(iList)
@@ -602,12 +544,13 @@ def _pair_up(iList, goal, current_cost):
 				#maximum amount of levels you can echant with is 39
 				if item_cost >= 40:
 					pass
-				#if 
-				elif lowest_value is not None and item_cost + current_cost > lowest_value:
+				#if calulated value is higher then the lowest current value
+				#stop there
+				elif local_lowest is not None and item_cost + current_cost > local_lowest:
 					pass
 				#if it doesn't meaninfully change the first item
 				#don't bother
-				elif check_enchantment_equality(new_item, mergee):
+				elif check_equality(new_item, mergee, False):
 					pass
 				#if it doesn't change the second one why bother at all
 				elif check_equality(new_item, merger):
@@ -615,7 +558,7 @@ def _pair_up(iList, goal, current_cost):
 				#check if item is the goal state
 				elif check_equality(new_item, goal, False):
 					#need to add for possible futures
-					answers = lowest_anwers_only(answers, (item_cost, (mergee, merger)))
+					local_lowest, answers = lowest_anwers_only(answers, local_lowest, (item_cost, (mergee, merger)))
 
 				else:
 					next_list = list(possible_mergers)
@@ -625,13 +568,63 @@ def _pair_up(iList, goal, current_cost):
 					ans = _pair_up(next_list, goal, item_cost + current_cost)
 
 					for a in ans:
-						answers = lowest_anwers_only(answers, replace_item(a, (item_cost, (mergee, merger)), new_item))
+						local_lowest, answers = lowest_anwers_only(answers, local_lowest, replace_item(a, (item_cost, (mergee, merger)), new_item))
 
 			#This is a improper pairing of items
 			except BadPair:
 				pass
 
 	return answers
+
+def TryPairingS():
+	b1 = Book()
+	b1.add_ench(Fortune, 3)
+	b2 = Book()
+	b2.add_ench(Efficiency, 5)
+
+	p = Pickaxe()
+
+	goal = Pickaxe()
+	goal.add_ench(Fortune, 3)
+	goal.add_ench(Efficiency, 5)
+
+	pair_up([b1, b2, p], goal)
+
+def TryPairingD():
+	b1 = Book()
+	b1.add_ench(Fortune, 3)
+	b3 = Book()
+	b3.add_ench(Fortune, 3)
+	b2 = Book()
+	b2.add_ench(Efficiency, 5)
+
+	p = Pickaxe()
+
+	goal = Pickaxe()
+	goal.add_ench(Fortune, 3)
+	goal.add_ench(Efficiency, 5)
+
+	pair_up([b1, b2, b3, p], goal)
+
+def TryPairingL():
+	b1 = Book()
+	b1.add_ench(Fortune, 3)
+	b2 = Book()
+	b2.add_ench(Efficiency, 5)
+	b3 = Book()
+	b3.add_ench(Unbreaking, 3)
+	b4 = Book()
+	b4.add_ench(Mending, 1)
+
+	p = Pickaxe()
+
+	goal = Pickaxe()
+	goal.add_ench(Fortune, 3)
+	goal.add_ench(Efficiency, 5)
+	goal.add_ench(Unbreaking, 3)
+	goal.add_ench(Mending, 1)
+
+	pair_up([b1, b2, b3, b4, p], goal)
 
 if __name__ == "__main__":
 	TryPairingL()
